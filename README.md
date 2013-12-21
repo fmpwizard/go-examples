@@ -1,20 +1,20 @@
 go-examples
 ===========
 
-Simple application usong Go and Twitter Flight
+Simple application using Go and Twitter Flight
 ==============================================
 
 # How to use
 
-1- `git clone https://github.com/fmpwizard/go-examples.git`
-2- `cd go-examples`
-2- `git checkout gochat`
-3- `bower install` //This will download all the js dependencies
-4- `npm install` //This will install more dependencies related to packaging the js code, etc
-5- `cd github.com/fmpwizard/chat`
-6- `go get` //this will download, build and install the dependencies based on the import statements on the `chat.go` file
-7- `grunt requirejs` //This step will run js lint and concatenate all your js files into one, and it will minify it too
-8- Finally, run `./bin/chat --root-dir=\`pwd\`` and it will start a web server at `http://127.0.0.1:7070`
+1. `git clone https://github.com/fmpwizard/go-examples.git`
+2. `cd go-examples`
+2. `git checkout gochat`
+3. `bower install` //This will download all the js dependencies
+4. `npm install` //This will install more dependencies related to packaging the js code, etc
+5. `cd github.com/fmpwizard/chat`
+6. `go get` //this will download, build and install the dependencies based on the import statements on the `chat.go` file
+7. `grunt requirejs` //This step will run js lint and concatenate all your js files into one, and it will minify it too
+8. Finally, run `./bin/chat --root-dir=\`pwd\`` and it will start a web server at `http://127.0.0.1:7070`
 
 
 ## Playing around with it
