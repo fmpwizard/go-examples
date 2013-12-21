@@ -113,7 +113,7 @@ func (chatMessages *ChatMessageResource) retrieveChatMessages(request *restful.R
 	if err != nil {
 		fmt.Errorf("Count not format page number to int", err)
 	}
-	fmt.Printf("last page is: %s\n", lastPage)
+	//fmt.Printf("last page is: %s\n", lastPage)
 	ret := sortMessages(chatMessages, lastPage)
 	response.WriteEntity(ret)
 }
@@ -148,17 +148,17 @@ func paginate(data []Message, page int64) []Message {
 	}
 
 	endNdx := func() int {
-		fmt.Printf("cap: %s\n\n", cap())
+		//fmt.Printf("cap: %s\n\n", cap())
 		if len(data)-cap() < 0 || cap() < 0 {
 			return 0
 		} else {
 			return len(data) - cap()
 		}
 	}
-	fmt.Printf("\nstartNdx: %s\n\n", startNdx())
-	fmt.Printf("len(data): %s\n\n", len(data))
-	fmt.Printf("endNdx(): %s\n\n", endNdx())
-	fmt.Printf("page: %s\n\n", page)
+	//fmt.Printf("\nstartNdx: %s\n\n", startNdx())
+	//fmt.Printf("len(data): %s\n\n", len(data))
+	//fmt.Printf("endNdx(): %s\n\n", endNdx())
+	//fmt.Printf("page: %s\n\n", page)
 
 	return data[startNdx():endNdx()]
 }
