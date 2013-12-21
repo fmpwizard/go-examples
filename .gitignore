@@ -20,3 +20,11 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+
+#js stuff
+app/bower_components/
+build/
+node_modules/
+src/github.com/emicklei/
+src/github.com/nu7hatch/
+bin/
