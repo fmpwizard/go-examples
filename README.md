@@ -23,4 +23,4 @@ If you would like to make changes to the js code and see the changes take effect
 
 Simply run `grunt watch` from the root of the project (where the Gruntfile.js file is)
 
-And when you make changes to the go code, you will have to stop and start the app again.
+And when you make changes to the go code, you will have to stop and start the app again. There is a `./run.sh` file you can use to start the app (you will need to edit it to fit your needs)
