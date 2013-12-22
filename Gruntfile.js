@@ -4,7 +4,8 @@ module.exports = function(grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
     appFiles : {
-      js:  'app/js/component/**/*.js'
+      js:  'app/js/component/**/*.js',
+      css: 'app/css/*.css'
     },
     dirs: {
       src: 'app/js/',
@@ -21,6 +22,10 @@ module.exports = function(grunt) {
       jssrc: {
         files: ['<%= appFiles.js %>'],
         tasks: [ 'jshint:src', 'requirejs']
+      },
+      cssmin: {
+        files: ['<%= appFiles.css %>'],
+        tasks: ['cssmin']
       }
     },
     jshint: {
@@ -66,6 +71,17 @@ module.exports = function(grunt) {
     clean: {
       build: ['<%= dirs.target %>']
     },
+    cssmin: {
+      combine: {
+        files: {
+          'build/main.min.css': [
+            'app/bower_components/components-bootstrap/css/bootstrap.css',
+            'app/bower_components/components-bootstrap/css/bootstrap-theme.css',
+            'app/css/main.css'
+          ]
+        }
+      }
+    },
     requirejs: {
       compile: {
         options: {
@@ -106,6 +122,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-clean');
+  grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
   grunt.renameTask('watch', 'delta');
   grunt.registerTask('watch', ['clean', 'jshint', 'delta']);

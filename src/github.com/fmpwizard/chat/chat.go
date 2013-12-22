@@ -61,15 +61,11 @@ func main() {
 
 func initStatic() *restful.WebService {
 	staticWS := new(restful.WebService)
-	staticWS.Route(staticWS.GET("/index").To(serveIndex))
-	staticWS.Route(staticWS.GET("/bower_components/{uno}/{dos}/{tres}").To(serveBowerFiles))
-	staticWS.Route(staticWS.GET("/bower_components/{uno}/{dos}").To(serveBowerFiles))
-	staticWS.Route(staticWS.GET("/build/main.js").To(serveMainJs))
-	staticWS.Route(staticWS.GET("/js/{uno}").To(serveJsFiles))
-	staticWS.Route(staticWS.GET("/js/{uno}/{dos}").To(serveJsFiles))
-	staticWS.Route(staticWS.GET("/js/{uno}/{dos}/{tres}").To(serveJsFiles))
-	staticWS.Route(staticWS.GET("/css/{uno}").To(serveCssFiles))
 	staticWS.Route(staticWS.GET("/messages").To(showMessages))
+	staticWS.Route(staticWS.GET("/index").To(serveIndex))
+	staticWS.Route(staticWS.GET("/bower_components/{uno}/{dos}").To(serveBowerFiles))
+	staticWS.Route(staticWS.GET("/build/{uno}").To(serveResources))
+
 	return staticWS
 }
 
@@ -205,37 +201,17 @@ func serveIndex(req *restful.Request, resp *restful.Response) {
 func serveBowerFiles(req *restful.Request, resp *restful.Response) {
 	uno := req.PathParameter("uno")
 	dos := req.PathParameter("dos")
-	tres := req.PathParameter("tres")
-
 	http.ServeFile(
 		resp.ResponseWriter,
 		req.Request,
-		path.Join(rootDir, "app/bower_components", uno, dos, tres))
+		path.Join(rootDir, "app/bower_components", uno, dos))
 }
 
-func serveJsFiles(req *restful.Request, resp *restful.Response) {
-	uno := req.PathParameter("uno")
-	dos := req.PathParameter("dos")
-	tres := req.PathParameter("tres")
-
-	http.ServeFile(
-		resp.ResponseWriter,
-		req.Request,
-		path.Join(rootDir, "app/js/", uno, dos, tres))
-}
-
-func serveMainJs(req *restful.Request, resp *restful.Response) {
-	http.ServeFile(
-		resp.ResponseWriter,
-		req.Request,
-		path.Join(rootDir, "build/main.js"))
-}
-
-func serveCssFiles(req *restful.Request, resp *restful.Response) {
+func serveResources(req *restful.Request, resp *restful.Response) {
 	uno := req.PathParameter("uno")
 
 	http.ServeFile(
 		resp.ResponseWriter,
 		req.Request,
-		path.Join(rootDir, "app/css", uno))
+		path.Join(rootDir, "build/", uno))
 }
