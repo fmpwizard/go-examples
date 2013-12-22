@@ -11,8 +11,10 @@ Simple application using Go and Twitter Flight
 2. `git checkout gochat`
 3. `bower install` //This will download all the js dependencies
 4. `npm install` //This will install more dependencies related to packaging the js code, etc
+4. When using Go, you need to set the `GOPATH` to your current project's filder, so:  `export GOPATH=/home/diego/work/golang/delete/go-examples`
 5. `cd src/github.com/fmpwizard/chat`
 6. `go get` //this will download, build and install the dependencies based on the import statements on the `chat.go` file
+7. Now go back to the root of the project, where the `run.sh` file is and run:
 7. `grunt requirejs` //This step will run js lint and concatenate all your js files into one, and it will minify it too
 8. Finally, run `./bin/chat --root-dir= <path to current dir>` and it will start a web server at `http://127.0.0.1:7070`
 
