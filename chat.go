@@ -61,8 +61,8 @@ func main() {
 
 func initStatic() *restful.WebService {
 	staticWS := new(restful.WebService)
-	staticWS.Route(staticWS.GET("/messages").To(showMessages))
 	staticWS.Route(staticWS.GET("/index").To(serveIndex))
+	staticWS.Route(staticWS.GET("/messages").To(showMessages))
 	staticWS.Route(staticWS.GET("/bower_components/{uno}/{dos}").To(serveBowerFiles))
 	staticWS.Route(staticWS.GET("/build/{uno}").To(serveResources))
 
