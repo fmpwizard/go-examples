@@ -26,6 +26,11 @@ type ChatMessageResource struct {
 	messages map[string]Message
 }
 
+type MessageStore struct {
+	chatMessages *ChatMessageResource
+	msg          Message
+}
+
 type ByCreatedOn []Message
 
 func (m ByCreatedOn) Len() int {
@@ -48,8 +53,11 @@ func init() {
 
 var messages = ChatMessageResource{map[string]Message{}}
 
+var messagesChan = make(chan MessageStore)
+
 func main() {
 	flag.Parse()
+	go handleAddMessage(messagesChan)
 	staticWS := initStatic()
 	wsContainer := restful.NewContainer()
 	wsContainer.Add(staticWS).EnableContentEncoding(true)
@@ -84,6 +92,12 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 
 }
 
+func handleAddMessage(payload chan MessageStore) {
+	for msg := range payload {
+		msg.chatMessages.messages[msg.msg.Id] = msg.msg
+	}
+}
+
 func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Request, response *restful.Response) {
 	guid, err := uuid.NewV4()
 	if err != nil {
@@ -93,7 +107,9 @@ func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Requ
 	msg := Message{Id: guid.String()}
 	parseErr := request.ReadEntity(&msg)
 	if parseErr == nil {
-		chatMessages.messages[msg.Id] = msg
+
+		messagesChan <- MessageStore{chatMessages, msg}
+
 		ret := map[string]string{"id": guid.String()}
 
 		response.WriteHeader(http.StatusCreated)
