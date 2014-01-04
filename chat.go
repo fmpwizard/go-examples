@@ -53,7 +53,7 @@ func init() {
 
 var messages = ChatMessageResource{map[string]Message{}}
 
-var messagesChan = make(chan MessageStore)
+var messagesChan = make(chan *MessageStore)
 
 func main() {
 	flag.Parse()
@@ -92,7 +92,7 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 
 }
 
-func handleAddMessage(payload chan MessageStore) {
+func handleAddMessage(payload chan *MessageStore) {
 	for msg := range payload {
 		msg.chatMessages.messages[msg.msg.Id] = msg.msg
 	}
@@ -108,7 +108,7 @@ func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Requ
 	parseErr := request.ReadEntity(&msg)
 	if parseErr == nil {
 
-		messagesChan <- MessageStore{chatMessages, msg}
+		messagesChan <- &MessageStore{chatMessages, msg}
 
 		ret := map[string]string{"id": guid.String()}
 
