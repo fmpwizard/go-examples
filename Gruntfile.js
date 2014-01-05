@@ -11,7 +11,7 @@ module.exports = function(grunt) {
       src: 'app/js/',
       target: 'target/grunt',
       dist: '<%= dirs.target %>/dist',
-      build: '<%= dirs.target %>/build',
+      build: 'build',
       resources: '<%= dirs.target %>/resources'
     },
     delta : {
@@ -69,12 +69,12 @@ module.exports = function(grunt) {
       }
     },
     clean: {
-      build: ['<%= dirs.target %>']
+      build: ['<%= dirs.target %>', '<%= dirs.build %>']
     },
     cssmin: {
       combine: {
         files: {
-          'build/main.min.css': [
+          '<%= dirs.build %>/main.min.css': [
             'app/bower_components/components-bootstrap/css/bootstrap.css',
             'app/bower_components/components-bootstrap/css/bootstrap-theme.css',
             'app/css/main.css'
@@ -94,7 +94,7 @@ module.exports = function(grunt) {
           ],
           baseUrl: './',
           removeCombined: true,
-          dir: 'build/',
+          dir: '<%= dirs.build %>/',
           appDir: 'app/js',
           optimize: 'uglify',
           uglify: {
@@ -129,6 +129,6 @@ module.exports = function(grunt) {
   
 
   // Default task(s).
-  grunt.registerTask('default', ['jshint', 'requirejs']);
+  grunt.registerTask('default', ['clean', 'jshint', 'requirejs', 'cssmin']);
 
 };
