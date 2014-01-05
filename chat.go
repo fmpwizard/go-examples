@@ -67,6 +67,8 @@ func main() {
 
 }
 
+// initStatic sets up the routes to server the index and messages page, as
+// well as our css and js files
 func initStatic() *restful.WebService {
 	staticWS := new(restful.WebService)
 	staticWS.Route(staticWS.GET("/index").To(serveIndex))
@@ -77,6 +79,7 @@ func initStatic() *restful.WebService {
 	return staticWS
 }
 
+// Register tells go-restful about our API uri's
 func (chatMessages *ChatMessageResource) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
@@ -84,7 +87,6 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	//Routes for the REST API
 	ws.Route(ws.PUT("/messages/new").To(chatMessages.createChatMessage))
 	ws.Route(ws.GET("/messages/{message-id}").To(chatMessages.retrieveChatMessage))
 	ws.Route(ws.GET("/messages/page/{last-page}").To(chatMessages.retrieveChatMessages))
@@ -92,6 +94,8 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 
 }
 
+// handleAddMessage reads the payload channel and adds a new entry to
+// the chat messages slice as they become available.
 func handleAddMessage(payload chan *MessageStore) {
 	for msg := range payload {
 		msg.chatMessages.messages[msg.msg.Id] = msg.msg
