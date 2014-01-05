@@ -139,44 +139,26 @@ func sortMessages(msgs *ChatMessageResource, page int64) ByCreatedOn {
 	for _, d := range msgs.messages {
 		s = append(s, d)
 	}
-	sort.Sort(ByCreatedOn(s))
-
+	sort.Sort(sort.Reverse(ByCreatedOn(s)))
 	return paginate(s, page)
 }
 
 func paginate(data []Message, page int64) []Message {
-	startNdx := func() int {
-		recordsToSkip := 10 * int(page+1)
-
-		if len(data)-recordsToSkip < 0 {
-			return 0
-		} else {
-			return len(data) - recordsToSkip
-		}
+	pageSize := 10
+	skip := int(page) * pageSize
+	if skip > len(data) {
+		skip = len(data)
 	}
 
-	cap := func() int {
-		if int(page)*10 < 10 {
-			return 0
-		} else {
-			return int(page) * 10
-		}
+	end := skip + pageSize
+	if end > len(data) {
+		end = len(data)
 	}
 
-	endNdx := func() int {
-		//fmt.Printf("cap: %s\n\n", cap())
-		if len(data)-cap() < 0 || cap() < 0 {
-			return 0
-		} else {
-			return len(data) - cap()
-		}
-	}
-	//fmt.Printf("\nstartNdx: %s\n\n", startNdx())
-	//fmt.Printf("len(data): %s\n\n", len(data))
-	//fmt.Printf("endNdx(): %s\n\n", endNdx())
-	//fmt.Printf("page: %s\n\n", page)
+	ret := data[skip:end]
+	sort.Sort(ByCreatedOn(ret))
 
-	return data[startNdx():endNdx()]
+	return ret
 }
 
 func showMessages(req *restful.Request, resp *restful.Response) {
