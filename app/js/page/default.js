@@ -10,6 +10,7 @@ define(function (require) {
   var MessageList = require('component/ui/message_list');
   var LoadMore    = require('component/ui/load_more');
   var ChatData    = require('component/data/chat_data');
+  var Comet       = require('component/comet');
 
   /**
    * Module exports
@@ -26,5 +27,6 @@ define(function (require) {
     MessageList.attachTo('#message-list');
     SendMessage.attachTo('.f-send-message');
     LoadMore.attachTo('#f-load-more');
+    Comet.attachTo('#message-list');
   }
 });

@@ -21,6 +21,12 @@ type Message struct {
 	CreatedOn int64  `json:"createdOn"`
 }
 
+type CometResponse struct {
+	Event  string  `json:"event"`
+	PageId string  `json:"pageId"`
+	Data   Message `json:"data"`
+}
+
 type ChatMessageResource struct {
 	// normally one would use DAO (data access object)
 	messages map[string]Message
@@ -52,8 +58,9 @@ func init() {
 }
 
 var messages = ChatMessageResource{map[string]Message{}}
-
 var messagesChan = make(chan *MessageStore)
+var cometChannel = make(chan Message)
+var numberOfComet = 2
 
 func main() {
 	flag.Parse()
@@ -90,6 +97,7 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 	ws.Route(ws.PUT("/messages/new").To(chatMessages.createChatMessage))
 	ws.Route(ws.GET("/messages/{message-id}").To(chatMessages.retrieveChatMessage))
 	ws.Route(ws.GET("/messages/page/{last-page}").To(chatMessages.retrieveChatMessages))
+	ws.Route(ws.GET("/comet/{id}").To(chatMessages.handleComet))
 	container.Add(ws)
 
 }
@@ -99,6 +107,9 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 func handleAddMessage(payload chan *MessageStore) {
 	for msg := range payload {
 		msg.chatMessages.messages[msg.msg.Id] = msg.msg
+		//Tell our comet channel that we got a new message
+		fmt.Printf("got message %v\n", msg.msg)
+		cometChannel <- msg.msg
 	}
 }
 
@@ -216,4 +227,29 @@ func serveResources(req *restful.Request, resp *restful.Response) {
 		resp.ResponseWriter,
 		req.Request,
 		path.Join(rootDir, "build/", uno))
+}
+
+func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
+	cometId := request.PathParameter("id")
+	fmt.Printf("Responding to comet id %v\n", cometId)
+
+	var ret CometResponse
+
+	select {
+	case m := <-cometChannel:
+		ret = CometResponse{"dataMessageSaved", cometId, m}
+	case <-time.After(30 * time.Second):
+		fmt.Printf("timed out %v\n", cometId)
+		ret = CometResponse{"start-long-pool", cometId, Message{}}
+	}
+
+	response.WriteEntity(ret)
+	fmt.Printf("sent %v to the browser \n", ret.Data)
+}
+
+func managePendingComets() {
+	numberOfComet--
+	if numberOfComet < 1 {
+		numberOfComet = 2
+	}
 }

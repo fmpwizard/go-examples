@@ -31,7 +31,8 @@ define(function (require) {
         .then(function(data, status){
           message.message.id = data.id;
           var result = message;
-          self.trigger('dataMessageSaved', result);
+          //We now let the comet component give us the new message.
+          //self.trigger('dataMessageSaved', result);
         });
     };
 
