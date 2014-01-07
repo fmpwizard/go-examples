@@ -19,13 +19,13 @@ module.exports = function(grunt) {
         files: 'Gruntfile.js',
         tasks: [ 'jshint:gruntfile' ]
       },
-      jssrc: {
-        files: ['<%= appFiles.js %>'],
-        tasks: [ 'jshint:src', 'requirejs']
-      },
       cssmin: {
         files: ['<%= appFiles.css %>'],
         tasks: ['cssmin']
+      },
+      jssrc: {
+        files: ['<%= appFiles.js %>'],
+        tasks: [ 'jshint:src', 'requirejs', 'cssmin']
       }
     },
     jshint: {
@@ -125,7 +125,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-contrib-requirejs');
   grunt.renameTask('watch', 'delta');
-  grunt.registerTask('watch', ['clean', 'jshint', 'delta']);
+  grunt.registerTask('watch', ['jshint', 'delta']);
   
 
   // Default task(s).
