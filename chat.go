@@ -263,7 +263,7 @@ func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, r
 		delete(comets.m, cometId)
 		comets.Unlock()
 
-	case <-time.After(30 * time.Second):
+	case <-time.After(20 * time.Second):
 		fmt.Printf("timed out %v\n", cometId)
 
 		comets.Lock()
