@@ -58,13 +58,15 @@ func init() {
 	flag.StringVar(&rootDir, "root-dir", "/home/diego/work/golang/groupchat", "specifies the root dir where html and other files will be relative to")
 }
 
-var messages = ChatMessageResource{map[string]Message{}}
-var messagesChan = make(chan *MessageStore)
-var cometChannel = make(chan Message)
-var comets = struct {
-	sync.RWMutex
-	m map[string]string
-}{m: make(map[string]string)}
+var (
+	messages     = ChatMessageResource{map[string]Message{}}
+	messagesChan = make(chan *MessageStore)
+	cometChannel = make(chan Message)
+	comets       = struct {
+		sync.RWMutex
+		m map[string]string
+	}{m: make(map[string]string)}
+)
 
 func main() {
 	flag.Parse()
