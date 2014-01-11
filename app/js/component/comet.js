@@ -28,6 +28,7 @@ define(function (require) {
       var delay = payload.delay;
       var pageId = payload.pageId;
       setTimeout(function(){
+        document.cookie = 'cometId' + '=' + pageId;
         $.ajax({ url: '/api/comet/' + pageId, success: function(data){
           console.log(data);
           self.trigger('start-long-pool', {

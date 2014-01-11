@@ -12,6 +12,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -60,7 +61,10 @@ func init() {
 var messages = ChatMessageResource{map[string]Message{}}
 var messagesChan = make(chan *MessageStore)
 var cometChannel = make(chan Message)
-var numberOfComet = 2
+var comets = struct {
+	sync.RWMutex
+	m map[string]string
+}{m: make(map[string]string)}
 
 func main() {
 	flag.Parse()
@@ -107,8 +111,6 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 func handleAddMessage(payload chan *MessageStore) {
 	for msg := range payload {
 		msg.chatMessages.messages[msg.msg.Id] = msg.msg
-		//Tell our comet channel that we got a new message
-		fmt.Printf("got message %v\n", msg.msg)
 		cometChannel <- msg.msg
 	}
 }
@@ -122,8 +124,16 @@ func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Requ
 	msg := Message{Id: guid.String()}
 	parseErr := request.ReadEntity(&msg)
 	if parseErr == nil {
-
-		messagesChan <- &MessageStore{chatMessages, msg}
+		fmt.Printf("full map %v\n", comets.m)
+		comets.RLock()
+		fmt.Println("Got read lock")
+		for key, _ := range comets.m {
+			fmt.Printf("Sending message to comet id: %v\n", key)
+			go func() {
+				messagesChan <- &MessageStore{chatMessages, msg}
+			}()
+		}
+		comets.RUnlock()
 
 		ret := map[string]string{"id": guid.String()}
 
@@ -230,26 +240,36 @@ func serveResources(req *restful.Request, resp *restful.Response) {
 }
 
 func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
+
 	cometId := request.PathParameter("id")
 	fmt.Printf("Responding to comet id %v\n", cometId)
+
+	comets.Lock()
+	comets.m[cometId] = "msg.Id"
+	comets.Unlock()
+
+	for key, value := range comets.m {
+		fmt.Printf("key is %v and value is %v\n", key, value)
+	}
 
 	var ret CometResponse
 
 	select {
 	case m := <-cometChannel:
 		ret = CometResponse{"dataMessageSaved", cometId, m}
+		comets.Lock()
+		delete(comets.m, cometId)
+		comets.Unlock()
+
 	case <-time.After(30 * time.Second):
 		fmt.Printf("timed out %v\n", cometId)
+
+		comets.Lock()
+		delete(comets.m, cometId)
+		comets.Unlock()
+
 		ret = CometResponse{"start-long-pool", cometId, Message{}}
 	}
-
 	response.WriteEntity(ret)
-	fmt.Printf("sent %v to the browser \n", ret.Data)
-}
-
-func managePendingComets() {
-	numberOfComet--
-	if numberOfComet < 1 {
-		numberOfComet = 2
-	}
+	fmt.Printf("Sending: %v\n", ret)
 }

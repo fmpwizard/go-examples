@@ -46,10 +46,9 @@ module.exports = function(grunt) {
         globals: {
           'jQuery': false,
           '$': false,
-          'angular': false,
           '_': false,
-          'Highcharts': false,
-          'App': true
+          'App': true,
+          'escape': true
         },
         jshintrc: '.jshintrc'
       },
