@@ -244,15 +244,11 @@ func serveResources(req *restful.Request, resp *restful.Response) {
 func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
 
 	cometId := request.PathParameter("id")
-	fmt.Printf("Responding to comet id %v\n", cometId)
+	//fmt.Printf("Responding to comet id %v\n", cometId)
 
 	comets.Lock()
 	comets.m[cometId] = "msg.Id"
 	comets.Unlock()
-
-	for key, value := range comets.m {
-		fmt.Printf("key is %v and value is %v\n", key, value)
-	}
 
 	var ret CometResponse
 
@@ -264,7 +260,7 @@ func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, r
 		comets.Unlock()
 
 	case <-time.After(20 * time.Second):
-		fmt.Printf("timed out %v\n", cometId)
+		//fmt.Printf("timed out %v\n", cometId)
 
 		comets.Lock()
 		delete(comets.m, cometId)
@@ -273,5 +269,4 @@ func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, r
 		ret = CometResponse{"start-long-pool", cometId, Message{}}
 	}
 	response.WriteEntity(ret)
-	fmt.Printf("Sending: %v\n", ret)
 }
