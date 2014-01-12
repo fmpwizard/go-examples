@@ -55,7 +55,7 @@ func (m ByCreatedOn) Less(i, j int) bool {
 var rootDir string
 
 func init() {
-	flag.StringVar(&rootDir, "root-dir", "/", "specifies the root dir where html and other files will be relative to")
+	flag.StringVar(&rootDir, "root-dir", "/home/diego/work/golang/groupchat", "specifies the root dir where html and other files will be relative to")
 }
 
 var (
@@ -76,7 +76,7 @@ func main() {
 	wsContainer.Add(staticWS).EnableContentEncoding(true)
 	messages.Register(wsContainer)
 	log.Println("Listening ...")
-	log.Fatal(http.ListenAndServe("0.0.0.0:8080", wsContainer))
+	log.Fatal(http.ListenAndServe(":7070", wsContainer))
 
 }
 
