@@ -73,7 +73,7 @@ func main() {
 	go handleAddMessage(messagesChan)
 	staticWS := initStatic()
 	wsContainer := restful.NewContainer()
-	wsContainer.Add(staticWS).EnableContentEncoding(true)
+	wsContainer.Add(staticWS).EnableContentEncoding(false)
 	messages.Register(wsContainer)
 	log.Println("Listening ...")
 	log.Fatal(http.ListenAndServe(":7070", wsContainer))
@@ -103,7 +103,7 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 	ws.Route(ws.PUT("/messages/new").To(chatMessages.createChatMessage))
 	ws.Route(ws.GET("/messages/{message-id}").To(chatMessages.retrieveChatMessage))
 	ws.Route(ws.GET("/messages/page/{last-page}").To(chatMessages.retrieveChatMessages))
-	ws.Route(ws.GET("/comet/{id}").To(chatMessages.handleComet))
+	ws.Route(ws.GET("/comet/{id}/{session-id}").To(chatMessages.handleComet))
 	container.Add(ws)
 
 }
@@ -113,6 +113,7 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 func handleAddMessage(payload chan *MessageStore) {
 	for msg := range payload {
 		msg.chatMessages.messages[msg.msg.Id] = msg.msg
+		fmt.Printf("numberOfComets ==>  %v <==\n", numberOfComets)
 		cometChannel <- msg.msg
 	}
 }
@@ -242,31 +243,46 @@ func serveResources(req *restful.Request, resp *restful.Response) {
 }
 
 func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
-
+	currentNumberOfComets := atomic.AddUint64(&numberOfComets, 1)
+	fmt.Printf("currentNumberOfComets %v\n", currentNumberOfComets)
 	cometId := request.PathParameter("id")
-	//fmt.Printf("Responding to comet id %v\n", cometId)
-
-	comets.Lock()
-	comets.m[cometId] = "msg.Id"
-	comets.Unlock()
+	sessionId := request.PathParameter("session-id")
+	fmt.Printf("Responding to session id %v\n", sessionId)
 
 	var ret CometResponse
 
 	select {
 	case m := <-cometChannel:
 		ret = CometResponse{"dataMessageSaved", cometId, m}
-		comets.Lock()
-		delete(comets.m, cometId)
-		comets.Unlock()
+		currentNumberOfComets = atomic.AddUint64(&numberOfComets, ^uint64(0))
+		fmt.Printf("currentNumberOfComets %v\n", currentNumberOfComets)
+		//atomic.AddUint64(&numberOfComets, ^uint64(0))
 
-	case <-time.After(20 * time.Second):
+	case <-time.After(7 * time.Second):
 		//fmt.Printf("timed out %v\n", cometId)
-
-		comets.Lock()
-		delete(comets.m, cometId)
-		comets.Unlock()
-
 		ret = CometResponse{"start-long-pool", cometId, Message{}}
+		currentNumberOfComets = atomic.AddUint64(&numberOfComets, ^uint64(0))
+		fmt.Printf("currentNumberOfComets %v\n", currentNumberOfComets)
+
 	}
+
+	notifier := response.CloseNotify()
+
+	//writer, _ := response.WriteEntity(ret)
 	response.WriteEntity(ret)
+	//notifier := writer.CloseNotify()
+
+	select {
+	case <-notifier:
+		fmt.Println("Found Closed connections")
+		if ret.Data.CreatedOn != 0 { //if this is a retry event, don't resend it to the channel
+			fmt.Println("Resending data message")
+			cometChannel <- ret.Data
+		}
+
+	case <-time.After(time.Second):
+		fmt.Println("CloseNotify timed out")
+
+	}
+
 }
