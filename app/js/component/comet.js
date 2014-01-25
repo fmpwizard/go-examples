@@ -27,13 +27,15 @@ define(function (require) {
       var self = this;
       var delay = payload.delay;
       var pageId = payload.pageId;
+      var sessionId = payload.sessionId;
+      console.log('sessionId ' + sessionId);
       setTimeout(function(){
-        document.cookie = 'cometId' + '=' + pageId;
-        $.ajax({ url: '/api/comet/' + pageId, success: function(data){
+        $.ajax({ url: '/api/comet/' + pageId + '/' + sessionId , success: function(data){
           console.log(data);
           self.trigger('start-long-pool', {
             delay: 0,
-            pageId: pageId
+            pageId: pageId,
+            sessionId: sessionId
           });
           $(document).trigger(data.event, {
             message: data.data
@@ -44,7 +46,8 @@ define(function (require) {
         error: function(){
           self.trigger('start-long-pool', {
             delay: delay + 1000,
-            pageId: pageId
+            pageId: pageId,
+            sessionId: sessionId
           });
         }
         });
@@ -55,7 +58,8 @@ define(function (require) {
       this.on('start-long-pool', this.startLongPool);
       this.trigger('start-long-pool', {
         delay: 0,
-        pageId: Math.random().toString(36).substring(7)
+        pageId: Math.random().toString(36).substring(7),
+        sessionId: Math.random().toString(36).substring(7)
       });
     });
   }
