@@ -9,10 +9,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -55,18 +57,21 @@ func (m ByCreatedOn) Less(i, j int) bool {
 var rootDir string
 
 func init() {
-	flag.StringVar(&rootDir, "root-dir", "/home/diego/work/golang/groupchat", "specifies the root dir where html and other files will be relative to")
+	currentDir, _ := os.Getwd()
+	flag.StringVar(&rootDir, "root-dir", currentDir, "specifies the root dir where html and other files will be relative to")
 }
 
 var (
-	messages     = ChatMessageResource{map[string]Message{}}
-	messagesChan = make(chan *MessageStore)
-	cometChannel = make(chan Message)
-	comets       = struct {
-		sync.RWMutex
-		m map[string]string
-	}{m: make(map[string]string)}
+	messages              = ChatMessageResource{map[string]Message{}}
+	messagesChan          = make(chan *MessageStore)
+	cometChannel          = make(chan Message)
+	numberOfComets uint64 = 0
 )
+
+var comets = struct {
+	sync.RWMutex
+	m map[string]string
+}{m: make(map[string]string)}
 
 func main() {
 	flag.Parse()
@@ -127,16 +132,11 @@ func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Requ
 	msg := Message{Id: guid.String()}
 	parseErr := request.ReadEntity(&msg)
 	if parseErr == nil {
-		fmt.Printf("full map %v\n", comets.m)
-		comets.RLock()
-		fmt.Println("Got read lock")
-		for key, _ := range comets.m {
-			fmt.Printf("Sending message to comet id: %v\n", key)
-			go func() {
-				messagesChan <- &MessageStore{chatMessages, msg}
-			}()
+		fmt.Printf("numberOfComets ==>  %v\n", numberOfComets)
+		for x := uint64(0); x < numberOfComets; x++ {
+			fmt.Println("Sending message ...")
+			messagesChan <- &MessageStore{chatMessages, msg}
 		}
-		comets.RUnlock()
 
 		ret := map[string]string{"id": guid.String()}
 
