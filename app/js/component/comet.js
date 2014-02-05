@@ -29,13 +29,16 @@ define(function (require) {
       var pageId = payload.pageId;
       var sessionId = payload.sessionId;
       console.log('sessionId ' + sessionId);
+      console.log('pageId ' + pageId);
       setTimeout(function(){
-        $.ajax({ url: '/api/comet/' + pageId + '/' + sessionId , success: function(data){
+        $.ajax({ url: '/api/comet/' + sessionId + '/' + pageId , success: function(data){
           console.log(data);
           self.trigger('start-long-pool', {
             delay: 0,
-            pageId: pageId,
-            sessionId: sessionId
+            sessionId: sessionId,
+            pageId: pageId
+            //pageId: Math.random().toString(36).substring(7),
+            
           });
           $(document).trigger(data.event, {
             message: data.data
@@ -46,8 +49,9 @@ define(function (require) {
         error: function(){
           self.trigger('start-long-pool', {
             delay: delay + 1000,
-            pageId: pageId,
-            sessionId: sessionId
+            sessionId: sessionId,
+            pageId: pageId
+            //pageId: Math.random().toString(36).substring(7)
           });
         }
         });
@@ -58,8 +62,9 @@ define(function (require) {
       this.on('start-long-pool', this.startLongPool);
       this.trigger('start-long-pool', {
         delay: 0,
-        pageId: Math.random().toString(36).substring(7),
-        sessionId: Math.random().toString(36).substring(7)
+        sessionId: Math.random().toString(36).substring(7),
+        pageId: Math.random().toString(36).substring(7)
+        
       });
     });
   }
