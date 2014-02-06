@@ -74,6 +74,8 @@ var comets = struct {
 	m map[string]string
 }{m: make(map[string]string)}
 
+var lpchan = make(chan chan *MessageStore)
+
 func main() {
 	flag.Parse()
 	go handleAddMessage(messagesChan)
@@ -133,14 +135,18 @@ func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Requ
 	msg := Message{Id: guid.String()}
 	parseErr := request.ReadEntity(&msg)
 	if parseErr == nil {
-		var rComets map[string]string
-		comets.RLock()
-		rComets = comets.m
-		comets.RUnlock()
-		for key, value := range rComets {
-			fmt.Printf("==> Looping over %s %s and sending a message %s\n", key, value, msg.Body)
-			messagesChan <- &MessageStore{chatMessages, msg, key}
+		fmt.Println("4")
+	Loop:
+		for {
+			select {
+			case clientchan := <-lpchan:
+				fmt.Println("5")
+				clientchan <- &MessageStore{chatMessages, msg, "key"}
+			default:
+				break Loop
+			}
 		}
+
 		ret := map[string]string{"id": guid.String()}
 
 		response.WriteHeader(http.StatusCreated)
@@ -246,61 +252,25 @@ func serveResources(req *restful.Request, resp *restful.Response) {
 }
 
 func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
-	sessionId := request.PathParameter("session-id")
-	pageId := request.PathParameter("page-id")
+	//sessionId := request.PathParameter("session-id")
+	//pageId := request.PathParameter("page-id")
 
-	_ = addCometToMap(sessionId, pageId, "initial")
+	//var ret CometResponse
 
-	var ret CometResponse
+	fmt.Println("0")
+	myRequestChan := make(chan *MessageStore)
 
 	select {
-	case m := <-cometChannel:
-		ret = CometResponse{"dataMessageSaved", m}
+	case lpchan <- myRequestChan:
+		//ret = CometResponse{"dataMessageSaved", m}
+		fmt.Println("1")
 	case <-time.After(7 * time.Second):
-		ret = CometResponse{"start-long-pool", Message{}}
-	}
-	notifier := response.CloseNotify()
-
-	if ret.Data.cometKey == sessionId+"-"+pageId {
-		response.WriteEntity(ret)
-	} else {
-		fmt.Printf("Skipping message for key %s and current sess+pageid %s\n", ret.Data.cometKey, (sessionId + "-" + pageId))
-		//Req A comes in, but his message is not there, so we skip it.
-		//then the message for Req A comes in, but Req A is not here, so we missed it
-		response.WriteEntity(CometResponse{"start-long-pool", Message{}})
+		fmt.Println("2")
+		return
 	}
 
-	select {
-	case <-notifier:
-		fmt.Printf("removing comet %s-%s\n", sessionId, pageId)
-		removeCometFromMap(sessionId, pageId)
-		if ret.Data.CreatedOn != 0 { //if this is a retry event, don't resend it to the channel
-			fmt.Printf("Resending data message %s\n", ret.Data.Body)
-			cometChannel <- ret.Data
+	ret := <-myRequestChan
 
-		}
-	case <-time.After(time.Second):
-		removeCometFromMap(sessionId, pageId)
-	}
-}
-
-func addCometToMap(sessionid, pageid string, msgId string) bool {
-	comets.Lock()
-	defer comets.Unlock()
-	value, ok := comets.m[sessionid+"-"+pageid]
-	if value == msgId && ok {
-		return true
-	} else if !ok {
-		comets.m[sessionid+"-"+pageid] = msgId
-		return false
-	} else {
-		return false
-	}
-
-}
-
-func removeCometFromMap(sessionid, pageid string) {
-	comets.Lock()
-	delete(comets.m, sessionid+"-"+pageid)
-	comets.Unlock()
+	fmt.Printf("3 %v\n", ret.msg)
+	response.WriteEntity(CometResponse{"dataMessageSaved", ret.msg})
 }
