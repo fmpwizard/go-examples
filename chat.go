@@ -13,8 +13,6 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"sync"
-	//"sync/atomic"
 	"time"
 )
 
@@ -22,7 +20,6 @@ type Message struct {
 	Id        string `json:"id"`
 	Body      string `json:"body"`
 	CreatedOn int64  `json:"createdOn"`
-	cometKey  string
 }
 
 type CometResponse struct {
@@ -38,7 +35,6 @@ type ChatMessageResource struct {
 type MessageStore struct {
 	chatMessages *ChatMessageResource
 	msg          Message
-	cometKey     string
 }
 
 type ByCreatedOn []Message
@@ -62,23 +58,12 @@ func init() {
 	flag.StringVar(&rootDir, "root-dir", currentDir, "specifies the root dir where html and other files will be relative to")
 }
 
-var (
-	messages     = ChatMessageResource{map[string]Message{}}
-	messagesChan = make(chan *MessageStore)
-	cometChannel = make(chan Message)
-	//numberOfComets uint64 = 0
-)
+var messages = ChatMessageResource{map[string]Message{}}
 
-var comets = struct {
-	sync.RWMutex
-	m map[string]string
-}{m: make(map[string]string)}
-
-var lpchan = make(chan chan *MessageStore)
+var lpchan = make(chan chan Message)
 
 func main() {
 	flag.Parse()
-	go handleAddMessage(messagesChan)
 	staticWS := initStatic()
 	wsContainer := restful.NewContainer()
 	wsContainer.Add(staticWS).EnableContentEncoding(false)
@@ -92,8 +77,7 @@ func main() {
 // well as our css and js files
 func initStatic() *restful.WebService {
 	staticWS := new(restful.WebService)
-	staticWS.Route(staticWS.GET("/index").To(serveIndex))
-	staticWS.Route(staticWS.GET("/messages").To(showMessages))
+	staticWS.Route(staticWS.GET("/index").To(showMessages))
 	staticWS.Route(staticWS.GET("/bower_components/{uno}/{dos}").To(serveBowerFiles))
 	staticWS.Route(staticWS.GET("/build/{uno}").To(serveResources))
 
@@ -116,16 +100,6 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 
 }
 
-// handleAddMessage reads the payload channel and adds a new entry to
-// the chat messages slice as they become available.
-func handleAddMessage(payload chan *MessageStore) {
-	for msg := range payload {
-		msg.chatMessages.messages[msg.msg.Id] = msg.msg
-		msg.msg.cometKey = msg.cometKey
-		cometChannel <- msg.msg
-	}
-}
-
 func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Request, response *restful.Response) {
 	guid, err := uuid.NewV4()
 	if err != nil {
@@ -141,7 +115,7 @@ func (chatMessages *ChatMessageResource) createChatMessage(request *restful.Requ
 			select {
 			case clientchan := <-lpchan:
 				fmt.Println("5")
-				clientchan <- &MessageStore{chatMessages, msg, "key"}
+				clientchan <- msg
 			default:
 				break Loop
 			}
@@ -226,13 +200,6 @@ func (chatMessages *ChatMessageResource) retrieveChatMessage(request *restful.Re
 
 }
 
-func serveIndex(req *restful.Request, resp *restful.Response) {
-	http.ServeFile(
-		resp.ResponseWriter,
-		req.Request,
-		path.Join(rootDir, "app/index.html"))
-}
-
 func serveBowerFiles(req *restful.Request, resp *restful.Response) {
 	uno := req.PathParameter("uno")
 	dos := req.PathParameter("dos")
@@ -258,7 +225,7 @@ func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, r
 	//var ret CometResponse
 
 	fmt.Println("0")
-	myRequestChan := make(chan *MessageStore)
+	myRequestChan := make(chan Message)
 
 	select {
 	case lpchan <- myRequestChan:
@@ -271,6 +238,6 @@ func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, r
 
 	ret := <-myRequestChan
 
-	fmt.Printf("3 %v\n", ret.msg)
-	response.WriteEntity(CometResponse{"dataMessageSaved", ret.msg})
+	fmt.Printf("3 %v\n", ret)
+	response.WriteEntity(CometResponse{"dataMessageSaved", ret})
 }
