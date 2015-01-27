@@ -8,7 +8,7 @@ Simple application using Go and Twitter Flight
 
 1. `git clone https://github.com/fmpwizard/go-examples.git`
 2. `cd go-examples`
-2. `git checkout gochat`
+2. `git checkout flightjs-comet`
 3. `bower install` //This will download all the js dependencies
 4. `npm install` //This will install more dependencies related to packaging the js code, etc
 4. When using Go, you need to set the `GOPATH` to your current project's filder, so:  `export GOPATH=/home/diego/work/golang/delete/go-examples`
