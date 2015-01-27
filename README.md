@@ -16,6 +16,7 @@ Simple application using Go and Twitter Flight
 6. `go get` //this will download, build and install the dependencies based on the import statements on the `chat.go` file
 7. Now go back to the root of the project, where the `run.sh` file is and run:
 7. `grunt requirejs` //This step will run js lint and concatenate all your js files into one, and it will minify it too
+7. `grunt` //This step will create the main.min.css, as well as the js files for the app to work.
 8. Finally, run `./bin/chat --root-dir= <path to current dir>` and it will start a web server at `http://127.0.0.1:7070`
 
 

@@ -6,7 +6,7 @@ requirejs.config({
     'flight': '../bower_components/flight',
     'component': '../js/component',
     'page': '../js/page',
-    'jquery': '../bower_components/jquery',
+    'jquery': '../bower_components/jquery/dist',
     'components-bootstrap': '../bower_components/components-bootstrap/js'
   }
 });
