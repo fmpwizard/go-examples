@@ -6,6 +6,7 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"io/ioutil"
 	"math/rand"
+	"runtime"
 	"sync"
 
 	"flag"
@@ -44,19 +45,21 @@ type comet struct {
 	LastSeen time.Time
 }
 
-type CometInfo struct {
-	CometId string
-	Index   uint64
+type TemplateInfo struct {
+	CometId  string
+	Index    uint64
+	Messages []message
 }
 
 type Response struct {
-	Value jsCmd
+	Value jsCmd `json:"value"`
 	Error string
 }
 
 type Responses struct {
-	Res       []Response
-	LastIndex uint64
+	Res       []Response `json:"resp"`
+	LastIndex uint64     `json:"lastIndex"`
+	Event     string     `json:"event"`
 }
 
 func (r Responses) Encode() []byte {
@@ -127,8 +130,10 @@ func main() {
 	flag.Parse()
 	http.HandleFunc("/index", showMessages)
 	http.HandleFunc("/api/messages/new", createChatMessage)
+	http.HandleFunc("/api/comet", handleComet)
 	http.Handle("/bower_components/", http.StripPrefix("/bower_components/", http.FileServer(http.Dir("app/bower_components"))))
 	http.Handle("/build/", http.StripPrefix("/build/", http.FileServer(http.Dir("build"))))
+	go gc()
 	log.Println("Listening ...")
 	log.Fatal(http.ListenAndServe(":7070", nil))
 }
@@ -143,13 +148,11 @@ func (chatMessages *ChatMessageResource) Register(container *restful.Container) 
 
 	ws.Route(ws.GET("/messages/{message-id}").To(chatMessages.retrieveChatMessage))
 	ws.Route(ws.GET("/messages/page/{last-page}").To(chatMessages.retrieveChatMessages))
-	ws.Route(ws.GET("/comet/{session-id}/{page-id}").To(chatMessages.handleComet))
 	container.Add(ws)
 
 }
 
 func createChatMessage(rw http.ResponseWriter, req *http.Request) {
-
 	guid, err := uuid.NewV4()
 	if err != nil {
 		fmt.Println("error:", err)
@@ -167,6 +170,7 @@ func createChatMessage(rw http.ResponseWriter, req *http.Request) {
 
 	ret := "console.log('" + data.Body + "');"
 	currentComet := req.FormValue("cometid") //TODO make sure to pass this in
+	fmt.Printf("got currentComet  %v\n", currentComet)
 	cookie, _ := req.Cookie("gsessionid")
 	messageStore.Lock()
 	messageStore.LastIndex++
@@ -189,7 +193,7 @@ func createChatMessage(rw http.ResponseWriter, req *http.Request) {
 func (chatMessages *ChatMessageResource) retrieveChatMessages(request *restful.Request, response *restful.Response) {
 	lastPage, err := strconv.ParseInt(request.PathParameter("last-page"), 10, 0)
 	if err != nil {
-		fmt.Errorf("Count not format page number to int", err)
+		fmt.Errorf("Count not format page number to int %v\n", err)
 	}
 	//fmt.Printf("last page is: %s\n", lastPage)
 	ret := sortMessages(chatMessages, lastPage)
@@ -260,14 +264,17 @@ func showMessages(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	messageStore.RLock()
-	_, found = messageStore.m[sessionCometKey(cookie.Value+cometId)]
+	messages, found := messageStore.m[sessionCometKey(cookie.Value+cometId)]
 	lastId := messageStore.LastIndex
 	messageStore.RUnlock()
 	if found {
 		index = lastId
 	}
 
-	err = t.ExecuteTemplate(rw, "messages.html", CometInfo{cometId, index})
+	err = t.ExecuteTemplate(rw, "messages.html", TemplateInfo{
+		CometId:  cometId,
+		Index:    index,
+		Messages: messages})
 	if err != nil {
 		log.Fatalf("got error: %s", err)
 	}
@@ -306,16 +313,64 @@ func (chatMessages *ChatMessageResource) retrieveChatMessage(request *restful.Re
 
 }
 
-func serveResources(req *restful.Request, resp *restful.Response) {
-	uno := req.PathParameter("uno")
+func handleComet(rw http.ResponseWriter, req *http.Request) {
+	// session-id}/{page-id // parameters we get
+	log.Printf("\n\nNumGoroutine %v\n", runtime.NumGoroutine())
+	rw.Header().Set("Content-Type", "application/json")
+	currentComet := req.FormValue("cometid")
+	currentIndex, _ := strconv.ParseUint(req.FormValue("index"), 10, 64)
+	cookie, _ := req.Cookie("gsessionid")
+	cometStore.Lock()
+	cometStore.m[session(cookie.Value)] = comet{currentComet, time.Now()} //update timestamp on comet
+	cometStore.Unlock()
+	var chanMessages = make(chan Responses)
+	var done = make(chan bool)
+	tick := time.NewTicker(500 * 2 * time.Millisecond)
+	key := sessionCometKey(cookie.Value + currentComet)
+	go func() {
+		for {
+			select {
+			case <-tick.C:
+				getMessages(key, currentIndex, chanMessages, done)
+			case <-done:
+				return
+			}
+		}
+	}()
 
-	http.ServeFile(
-		resp.ResponseWriter,
-		req.Request,
-		path.Join(rootDir, "build/", uno))
+	select {
+	case messages := <-chanMessages:
+		done <- true
+		rw.Write(messages.Encode())
+	case <-time.After(time.Second * 60):
+		done <- true
+		rw.Write(Responses{[]Response{Response{Value: jsCmd{""}, Error: ""}}, currentIndex, ""}.Encode())
+	}
 }
 
-func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
+func getMessages(key sessionCometKey, currentIndex uint64, result chan Responses, done chan bool) {
+	messageStore.RLock()
+	messages, found := messageStore.m[key]
+	lastId := messageStore.LastIndex
+	messageStore.RUnlock()
+	if found {
+		var payload Responses
+		for _, msg := range messages {
+			if currentIndex < msg.index {
+				payload.Res = append(payload.Res, Response{jsCmd{msg.Value.Js}, ""})
+			} else {
+				log.Printf("not sending message %+v\n", msg)
+			}
+		}
+		if len(payload.Res) > 0 {
+			payload.LastIndex = lastId
+			payload.Event = "dataMessages"
+			result <- payload
+		}
+	}
+}
+
+/*func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
 	//sessionId := request.PathParameter("session-id")
 	//pageId := request.PathParameter("page-id")
 
@@ -337,4 +392,26 @@ func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, r
 
 	fmt.Printf("3 %v\n", ret)
 	response.WriteEntity(CometResponse{"dataMessageSaved", ret})
+}
+*/
+
+func gc() {
+	for _ = range time.Tick(10 * time.Second) {
+		log.Println("Started gc")
+		start := time.Now()
+		messageStore.Lock()
+		for storeKey, messages := range messageStore.m {
+			var temp []message
+			for key, message := range messages {
+				if time.Now().Sub(message.Stamp) > 20*time.Second {
+					log.Printf("temp starts as %+v ", temp)
+					temp = append(messages[:key], messages[key+1:]...)
+					log.Printf("temp ends as %+v ", temp)
+				}
+			}
+			messageStore.m[storeKey] = temp
+		}
+		messageStore.Unlock()
+		log.Printf("Ended gc. It took %v ms\n", time.Now().Sub(start).Nanoseconds()/1000)
+	}
 }

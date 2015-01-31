@@ -30,8 +30,10 @@ define(function (require) {
     this.addMessageLine = function (payload, append) {
       var $messageRow = this.select('listSelector').first();
       var $clonedMessageRow = $messageRow.clone().removeAttr('id').removeClass('hidden');
-      $clonedMessageRow.children('.f-message').first().text(payload.body);
-      $clonedMessageRow.children('.f-time').first().text(new Date(payload.createdOn));
+      console.log('1', payload);
+      $clonedMessageRow.children('.f-message').first().text(payload.value.js);
+      $clonedMessageRow.children('.f-time').first().text(payload.stamp); //TODO: add time here
+      //$clonedMessageRow.children('.f-time').first().text(new Date(payload.stamp));
       if (append.append === true){
         this.$node.append($clonedMessageRow);
       } else {
@@ -41,10 +43,11 @@ define(function (require) {
     };
 
     this.handleDataMessages = function (event, payload) {
+      console.log('payload ', payload);
       if(payload.prepend){
-        payload.messages.reverse().forEach(this.addMessageLine, this);
+        payload.message.resp.reverse().forEach(this.addMessageLine, this);
       } else {
-        payload.messages.forEach(this.addMessageLine, this);
+        payload.message.resp.forEach(this.addMessageLine, this);
       }
       
     };

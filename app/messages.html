@@ -50,12 +50,13 @@
             <div class="col-sm-4 f-time">diego</div>
             <div class="col-sm-6 f-message"></div>
           </div>
-          <!-- {range .}
+          {{range .Messages}}
             <div class="row f-message-row" id="{.Id}" >
-              <div class="col-sm-4 f-time">{ UnixToString .CreatedOn }</div>
-              <div class="col-sm-6 f-message">{.Body}</div>
+              <div class="col-sm-4 f-time">{{ .Stamp }}</div>
+              <!-- <div class="col-sm-4 f-time">{ UnixToString .Stamp }</div> -->
+              <div class="col-sm-6 f-message">{{.Value}}</div>
             </div>
-          {end} -->
+          {{end}}
         </div>
         <form class="form-inline f-send-message" role="form">
           <div class="form-group col-sm-8">

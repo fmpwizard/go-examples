@@ -20,7 +20,7 @@ define(function (require) {
       var result = $.ajax({
         type: 'PUT',
         contentType: 'application/json',
-        url: '/api/messages/new',
+        url: '/api/messages/new?cometid='+window.cometId,
         data: JSON.stringify(message)
       });
 
