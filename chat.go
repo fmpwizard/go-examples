@@ -186,46 +186,6 @@ func createChatMessage(rw http.ResponseWriter, req *http.Request) {
 
 }
 
-/*func createChatMessage(rw http.ResponseWriter, req *http.Request) {
-	//TODO
-	guid, err := uuid.NewV4()
-	if err != nil {
-		fmt.Println("error:", err)
-		return
-	}
-	msg := Message{Id: guid.String()}
-	body, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		fmt.Printf("Error reading Body, got %v", err)
-	}
-	err = json.Unmarshal(body, &msg)
-	if err != nil {
-		fmt.Println("4 error ", err)
-	}
-
-	if parseErr == nil {
-		fmt.Println("4")
-	Loop:
-		for {
-			select {
-			case clientchan := <-lpchan:
-				fmt.Println("5")
-				clientchan <- msg
-			default:
-				break Loop
-			}
-		}
-
-		ret := map[string]string{"id": guid.String()}
-
-		response.WriteHeader(http.StatusCreated)
-		response.WriteEntity(ret)
-	} else {
-		response.AddHeader("Content-Type", "text/plain")
-		response.WriteErrorString(http.StatusInternalServerError, parseErr.Error())
-	}
-}*/
-
 func (chatMessages *ChatMessageResource) retrieveChatMessages(request *restful.Request, response *restful.Response) {
 	lastPage, err := strconv.ParseInt(request.PathParameter("last-page"), 10, 0)
 	if err != nil {
@@ -273,7 +233,7 @@ func showMessages(rw http.ResponseWriter, req *http.Request) {
 	cookie, err := req.Cookie("gsessionid")
 	if err == http.ErrNoCookie {
 		rand.Seed(time.Now().UnixNano())
-		sess := strconv.FormatFloat(rand.Float64(), 'f', 20, 64)
+		sess := strconv.FormatInt(int64(rand.Float64()*1000000000000000), 10)
 		cookie = &http.Cookie{
 			Name:    "gsessionid",
 			Value:   sess,
@@ -293,7 +253,7 @@ func showMessages(rw http.ResponseWriter, req *http.Request) {
 	} else {
 		//create comet for the first time
 		rand.Seed(time.Now().UnixNano())
-		cometId = strconv.FormatFloat(rand.Float64(), 'f', 20, 64)
+		cometId = strconv.FormatInt(int64(rand.Float64()*1000000000000000), 10)
 		cometStore.Lock()
 		cometStore.m[session(cookie.Value)] = comet{cometId, time.Now()}
 		cometStore.Unlock()
