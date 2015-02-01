@@ -83,18 +83,6 @@
     <script type="text/javascript">
       var cometId = {{.CometId}};
       var index = {{.Index}};
-      $("#message").submit(function(e){
-        var msg = $("#msg").val();
-        $("#msg").val("");
-        $.ajax({
-            url: "/add?data="+msg+"&cometid="+cometId,
-            context: document.body,
-            timeout: 6000,
-            dataType: 'json'
-        });
-        e.preventDefault();
-      });
-
     </script>
     
   </body>

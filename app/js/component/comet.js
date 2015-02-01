@@ -27,26 +27,21 @@ define(function (require) {
       var self = this;
       var delay = payload.delay;
       var pageId = payload.pageId;
-      var sessionId = payload.sessionId;
       var index = payload.index;
       var cometId = payload.cometId;
-      console.log('sessionId ' + sessionId);
-      console.log('pageId ' + pageId);
-      console.log('window.cometId ' + window.cometId);
       setTimeout(function(){
         $.ajax({
-          url: '/api/comet?sessionid=' + sessionId + '&page=' + pageId + '&index=' + index + '&cometid=' + cometId,
+          url: '/api/comet?page=' + pageId + '&index=' + index + '&cometid=' + cometId,
           success: function(data){
-            console.log('data', data);
             self.trigger('start-long-pool', {
               delay: 0,
-              sessionId: sessionId,
               pageId: pageId,
               index: data.lastIndex,
               cometId: cometId
             });
             $(document).trigger(data.event, {
-              message: data
+              message: data,
+              prepend: false
             });
           },
           dataType: 'json',
@@ -54,7 +49,6 @@ define(function (require) {
           error: function(){
             self.trigger('start-long-pool', {
               delay: delay + 1000,
-              sessionId: sessionId,
               pageId: pageId,
               index: index,
               cometId: cometId
@@ -68,7 +62,6 @@ define(function (require) {
       this.on('start-long-pool', this.startLongPool);
       this.trigger('start-long-pool', {
         delay: 0,
-        sessionId: Math.random().toString(36).substring(7),
         pageId: Math.random().toString(36).substring(7),
         index: window.index,
         cometId: window.cometId

@@ -15,6 +15,7 @@ define(function (require){
         body: $message.val(),
         createdOn: new Date().getTime()
       };
+      $message.val('');
 
       this.trigger('uiMessageSent', {
         message: message
