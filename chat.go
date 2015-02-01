@@ -2,22 +2,20 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/emicklei/go-restful"
-	"github.com/nu7hatch/gouuid"
-	"io/ioutil"
-	"math/rand"
-	"runtime"
-	"sync"
-
 	"flag"
 	"fmt"
+	"github.com/nu7hatch/gouuid"
 	"html/template"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path"
+	"runtime"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -130,26 +128,13 @@ func main() {
 	flag.Parse()
 	http.HandleFunc("/index", showMessages)
 	http.HandleFunc("/api/messages/new", createChatMessage)
+	http.HandleFunc("/api/messages/page", retrieveChatMessages)
 	http.HandleFunc("/api/comet", handleComet)
 	http.Handle("/bower_components/", http.StripPrefix("/bower_components/", http.FileServer(http.Dir("app/bower_components"))))
 	http.Handle("/build/", http.StripPrefix("/build/", http.FileServer(http.Dir("build"))))
 	go gc()
 	log.Println("Listening ...")
 	log.Fatal(http.ListenAndServe(":7070", nil))
-}
-
-// Register tells go-restful about our API uri's
-func (chatMessages *ChatMessageResource) Register(container *restful.Container) {
-	ws := new(restful.WebService)
-	ws.
-		Path("/api").
-		Consumes(restful.MIME_JSON).
-		Produces(restful.MIME_JSON)
-
-	ws.Route(ws.GET("/messages/{message-id}").To(chatMessages.retrieveChatMessage))
-	ws.Route(ws.GET("/messages/page/{last-page}").To(chatMessages.retrieveChatMessages))
-	container.Add(ws)
-
 }
 
 func createChatMessage(rw http.ResponseWriter, req *http.Request) {
@@ -190,14 +175,14 @@ func createChatMessage(rw http.ResponseWriter, req *http.Request) {
 
 }
 
-func (chatMessages *ChatMessageResource) retrieveChatMessages(request *restful.Request, response *restful.Response) {
-	lastPage, err := strconv.ParseInt(request.PathParameter("last-page"), 10, 0)
+func retrieveChatMessages(rw http.ResponseWriter, req *http.Request) {
+	page, err := strconv.ParseInt(req.FormValue("page"), 10, 0)
 	if err != nil {
-		fmt.Errorf("Count not format page number to int %v\n", err)
+		rw.WriteHeader(http.StatusNotFound)
+	} else {
+		fmt.Printf("getting page %d\n", page)
 	}
-	//fmt.Printf("last page is: %s\n", lastPage)
-	ret := sortMessages(chatMessages, lastPage)
-	response.WriteEntity(ret)
+
 }
 
 func sortMessages(msgs *ChatMessageResource, page int64) ByCreatedOn {
@@ -271,6 +256,8 @@ func showMessages(rw http.ResponseWriter, req *http.Request) {
 		index = lastId
 	}
 
+	fmt.Printf("messages %+v", messages)
+
 	err = t.ExecuteTemplate(rw, "messages.html", TemplateInfo{
 		CometId:  cometId,
 		Index:    index,
@@ -281,36 +268,9 @@ func showMessages(rw http.ResponseWriter, req *http.Request) {
 
 }
 
-/*func showMessages(rw http.ResponseWriter, req *http.Request) {
-	ret := sortMessages(&messages, 0)
-	t := template.New("messages.html")
-	t.Funcs(template.FuncMap{"UnixToString": UnixToString})
-	t, err := t.ParseFiles(path.Join(rootDir, "app/messages.html"))
-	if err != nil {
-		panic(err)
-	}
-	rw.Header().Add("Content-Type", "text/html; charset=UTF-8")
-	err = t.ExecuteTemplate(rw, "messages.html", ret)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-*/func UnixToString(x int64) string {
+func UnixToString(x int64) string {
 	ret := time.Unix(x/1000, 0)
 	return ret.String()
-}
-
-func (chatMessages *ChatMessageResource) retrieveChatMessage(request *restful.Request, response *restful.Response) {
-	messageId := request.PathParameter("message-id")
-	msg, found := chatMessages.messages[messageId]
-	if found {
-		response.WriteEntity(msg)
-	} else {
-		response.WriteErrorString(http.StatusNotFound, "Message not found")
-	}
-
 }
 
 func handleComet(rw http.ResponseWriter, req *http.Request) {
@@ -369,31 +329,6 @@ func getMessages(key sessionCometKey, currentIndex uint64, result chan Responses
 		}
 	}
 }
-
-/*func (chatMessages *ChatMessageResource) handleComet(request *restful.Request, response *restful.Response) {
-	//sessionId := request.PathParameter("session-id")
-	//pageId := request.PathParameter("page-id")
-
-	//var ret CometResponse
-
-	fmt.Println("0")
-	myRequestChan := make(chan Message)
-
-	select {
-	case lpchan <- myRequestChan:
-		//ret = CometResponse{"dataMessageSaved", m}
-		fmt.Println("1")
-	case <-time.After(7 * time.Second):
-		fmt.Println("2")
-		return
-	}
-
-	ret := <-myRequestChan
-
-	fmt.Printf("3 %v\n", ret)
-	response.WriteEntity(CometResponse{"dataMessageSaved", ret})
-}
-*/
 
 func gc() {
 	for _ = range time.Tick(10 * time.Second) {
