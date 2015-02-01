@@ -13,7 +13,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -84,45 +83,12 @@ type Message struct {
 	CreatedOn int64  `json:"createdOn"`
 }
 
-type CometResponse struct {
-	Event string  `json:"event"`
-	Data  Message `json:"data"`
-}
-
-type ChatMessageResource struct {
-	// normally one would use DAO (data access object)
-	messages map[string]Message
-}
-
-type MessageStore struct {
-	chatMessages *ChatMessageResource
-	msg          Message
-}
-
-type ByCreatedOn []Message
-
-func (m ByCreatedOn) Len() int {
-	return len(m)
-}
-
-func (m ByCreatedOn) Swap(i, j int) {
-	m[i], m[j] = m[j], m[i]
-}
-
-func (m ByCreatedOn) Less(i, j int) bool {
-	return m[i].CreatedOn < m[j].CreatedOn
-}
-
 var rootDir string
 
 func init() {
 	currentDir, _ := os.Getwd()
 	flag.StringVar(&rootDir, "root-dir", currentDir, "specifies the root dir where html and other files will be relative to")
 }
-
-var messages = ChatMessageResource{map[string]Message{}}
-
-var lpchan = make(chan chan Message)
 
 func main() {
 	flag.Parse()
@@ -183,33 +149,6 @@ func retrieveChatMessages(rw http.ResponseWriter, req *http.Request) {
 		fmt.Printf("getting page %d\n", page)
 	}
 
-}
-
-func sortMessages(msgs *ChatMessageResource, page int64) ByCreatedOn {
-	s := make(ByCreatedOn, 0, len(msgs.messages))
-	for _, d := range msgs.messages {
-		s = append(s, d)
-	}
-	sort.Sort(sort.Reverse(ByCreatedOn(s)))
-	return paginate(s, page)
-}
-
-func paginate(data []Message, page int64) []Message {
-	pageSize := 10
-	skip := int(page) * pageSize
-	if skip > len(data) {
-		skip = len(data)
-	}
-
-	end := skip + pageSize
-	if end > len(data) {
-		end = len(data)
-	}
-
-	ret := data[skip:end]
-	sort.Sort(ByCreatedOn(ret))
-
-	return ret
 }
 
 func showMessages(rw http.ResponseWriter, req *http.Request) {
